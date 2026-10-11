@@ -37,8 +37,8 @@ function Model({ reducedMotion, size }: { reducedMotion: boolean; size: number }
       document.body.style.cursor = 'grabbing'
     }
     const onMove = (e: PointerEvent) => {
-      regress()
       if (!d.active) return
+      regress()
       d.yaw += (e.clientX - d.lastX) * DRAG_SPEED
       d.pitch = MathUtils.clamp(d.pitch + (e.clientY - d.lastY) * DRAG_SPEED, -MAX_PITCH, MAX_PITCH)
       d.lastX = e.clientX

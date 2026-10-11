@@ -45,11 +45,12 @@ export default function App() {
         camera={{ position: [0, 0.4, 4.2], fov: 32 }}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         frameloop={reducedMotion ? 'demand' : 'always'}
+        performance={{ min: 0.75 }}
       >
         <Suspense fallback={null}>
           <Scene reducedMotion={reducedMotion} onReady={onReady} />
         </Suspense>
-        <AdaptiveDpr pixelated />
+        <AdaptiveDpr />
       </Canvas>
 
       <div className="copy">
