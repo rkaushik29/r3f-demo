@@ -38,6 +38,7 @@ body {
 .stage canvas {
   display: block;
   touch-action: none;
+  cursor: grab;
 }
 
 /* Paper grain, rendered once as a tile. */
@@ -145,12 +146,6 @@ body {
   text-transform: uppercase;
   color: var(--ink-soft);
   font-variant-numeric: tabular-nums;
-}
-
-@media (hover: none) {
-  .meta-tr {
-    display: none;
-  }
 }
 
 @media (max-width: 640px) {

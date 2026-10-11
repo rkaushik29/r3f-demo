@@ -57,7 +57,7 @@ export default function App() {
           <span>No. 01</span>
           <span>Camera, leather strap</span>
         </p>
-        <p className="meta meta-tr">{reducedMotion ? 'Motion reduced' : 'Move your cursor'}</p>
+        <p className="meta meta-tr">{reducedMotion ? 'Motion reduced' : 'Drag to turn'}</p>
         <h1 className="headline">
           Show,
           <br />

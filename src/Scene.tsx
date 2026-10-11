@@ -7,6 +7,8 @@ const MODEL_URL = '/model.glb'
 const HDRI_URL = '/studio.hdr'
 const MAX_SIZE = 2.8
 const REST_TILT = -0.25
+const DRAG_SPEED = 0.006
+const MAX_PITCH = 0.9
 
 useGLTF.preload(MODEL_URL)
 
@@ -14,6 +16,8 @@ function Model({ reducedMotion, size }: { reducedMotion: boolean; size: number }
   const { scene } = useGLTF(MODEL_URL)
   const group = useRef<Group>(null)
   const regress = useThree((state) => state.performance.regress)
+  const invalidate = useThree((state) => state.invalidate)
+  const drag = useRef({ active: false, lastX: 0, lastY: 0, yaw: 0, pitch: 0, spin: 0 })
 
   const { scale, offset } = useMemo(() => {
     const box = new Box3().setFromObject(scene)
@@ -24,24 +28,57 @@ function Model({ reducedMotion, size }: { reducedMotion: boolean; size: number }
   }, [scene, size])
 
   useEffect(() => {
-    if (reducedMotion) return
-    const onMove = () => regress()
+    const d = drag.current
+    const onDown = (e: PointerEvent) => {
+      if (e.button !== 0) return
+      d.active = true
+      d.lastX = e.clientX
+      d.lastY = e.clientY
+      document.body.style.cursor = 'grabbing'
+    }
+    const onMove = (e: PointerEvent) => {
+      regress()
+      if (!d.active) return
+      d.yaw += (e.clientX - d.lastX) * DRAG_SPEED
+      d.pitch = MathUtils.clamp(d.pitch + (e.clientY - d.lastY) * DRAG_SPEED, -MAX_PITCH, MAX_PITCH)
+      d.lastX = e.clientX
+      d.lastY = e.clientY
+      invalidate()
+    }
+    const onUp = () => {
+      d.active = false
+      document.body.style.cursor = ''
+    }
+    window.addEventListener('pointerdown', onDown)
     window.addEventListener('pointermove', onMove, { passive: true })
-    return () => window.removeEventListener('pointermove', onMove)
-  }, [reducedMotion, regress])
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+    return () => {
+      window.removeEventListener('pointerdown', onDown)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+      document.body.style.cursor = ''
+    }
+  }, [regress, invalidate])
 
   useFrame((state, delta) => {
     const g = group.current
     if (!g) return
-    if (reducedMotion) {
-      g.rotation.set(REST_TILT, 0.6, 0)
-      return
+    const d = drag.current
+    const idle = !reducedMotion && !d.active
+    if (idle) d.spin += delta * 0.1
+    const pointerX = idle ? state.pointer.x : 0
+    const pointerY = idle ? state.pointer.y : 0
+    const targetY = 0.6 + d.spin + d.yaw + pointerX * 0.6
+    const targetX = REST_TILT + d.pitch - pointerY * 0.3
+    const lambda = d.active ? 14 : 3
+    g.rotation.y = MathUtils.damp(g.rotation.y, targetY, lambda, delta)
+    g.rotation.x = MathUtils.damp(g.rotation.x, targetX, lambda, delta)
+    // Under reduced motion the loop is on-demand, so keep asking for frames until the damping settles.
+    if (reducedMotion && (Math.abs(g.rotation.y - targetY) > 1e-3 || Math.abs(g.rotation.x - targetX) > 1e-3)) {
+      invalidate()
     }
-    const { x, y } = state.pointer
-    const targetY = 0.6 + x * 0.6 + state.clock.elapsedTime * 0.1
-    const targetX = REST_TILT - y * 0.3
-    g.rotation.y = MathUtils.damp(g.rotation.y, targetY, 3, delta)
-    g.rotation.x = MathUtils.damp(g.rotation.x, targetX, 3, delta)
   })
 
   return (
